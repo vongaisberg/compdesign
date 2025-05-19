@@ -13,6 +13,8 @@ import edu.kit.kastel.vads.compiler.parser.ast.FunctionTree;
 import edu.kit.kastel.vads.compiler.parser.ast.ProgramTree;
 import edu.kit.kastel.vads.compiler.semantic.SemanticAnalysis;
 import edu.kit.kastel.vads.compiler.semantic.SemanticException;
+
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -51,7 +53,7 @@ public class Main {
 
         // TODO: generate assembly and invoke gcc instead of generating abstract assembly
         String s = new CodeGenerator().generateCode(graphs);
-        Files.writeString(output, s);
+        Files.writeString(new File(output.toString()+".s").toPath(), s);
 
         ProcessBuilder processBuilder = new ProcessBuilder("gcc", output.toString()+".s", "-o", output.toString());
         try {
