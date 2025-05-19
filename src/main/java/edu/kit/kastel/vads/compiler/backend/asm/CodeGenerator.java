@@ -71,7 +71,13 @@ public class CodeGenerator {
             case AddNode add -> binary(builder, registers, add, "addl");
             case SubNode sub -> binary(builder, registers, sub, "subl");
             case MulNode mul -> binary(builder, registers, mul, "imull");
-            case DivNode div -> binary(builder, registers, div, "idivl");
+            case DivNode div -> {
+                builder.repeat(" ", 2)
+                        .append("movl ").append(registers.get(predecessorSkipProj(div, BinaryOperationNode.LEFT))).append(",%eax\n")
+                        .append("  cdq\n")
+                        .append("  idivl ").append(registers.get(predecessorSkipProj(div, BinaryOperationNode.RIGHT))).append("\n")
+                        .append("  movl %eax,").append(registers.get(div));
+            }
             case ModNode mod -> binary(builder, registers, mod, "imodl");
             case ReturnNode r ->
                     builder.repeat(" ", 2).append("movl ").append(registers.get(predecessorSkipProj(r, ReturnNode.RESULT))).append(",%eax\n").append("  ret");
