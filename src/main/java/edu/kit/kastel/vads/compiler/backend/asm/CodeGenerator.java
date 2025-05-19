@@ -41,8 +41,6 @@ public class CodeGenerator {
                 .data
                 """);
         for (IrGraph graph : program) {
-            builder.append(String.format("_%s:\n", graph.name()));
-
             AasmRegisterAllocator allocator = new AasmRegisterAllocator();
             Map<Node, Register> registers = allocator.allocateRegisters(graph);
             for (Register register : registers.values()) {
@@ -97,9 +95,9 @@ public class CodeGenerator {
             }
             case ModNode mod -> binary(builder, registers, mod, "imodl");
             case ReturnNode r ->
-                    builder.repeat(" ", 2).append("movl ").append(registers.get(predecessorSkipProj(r, ReturnNode.RESULT))).append("(,1)").append(",%eax\n").append("  ret");
+                    builder.repeat(" ", 2).append("movl ").append(registers.get(predecessorSkipProj(r, ReturnNode.RESULT))).append("(%rip)").append(",%eax\n").append("  ret");
             case ConstIntNode c ->
-                    builder.repeat(" ", 2).append("movl $").append(c.value()).append(",").append(registers.get(c));
+                    builder.repeat(" ", 2).append("movl $").append(c.value()).append(",").append(registers.get(c)).append("(%rip)");
             case Phi _ -> throw new UnsupportedOperationException("phi");
             case Block _, ProjNode _, StartNode _ -> {
                 // do nothing, skip line break
@@ -111,7 +109,7 @@ public class CodeGenerator {
 
     private static void binary(StringBuilder builder, Map<Node, Register> registers, BinaryOperationNode node, String opcode) {
         builder.repeat(" ", 2)
-                .append(String.format("movl %s(,1),%%ebx\n movl %s(,1),%%ecx\n %s %%ebx,%%ecx\nmovl %%ecx,%s\n",
+                .append(String.format("movl %s(%%rip),%%ebx\n movl %s(%%rip),%%ecx\n %s %%ebx,%%ecx\nmovl %%ecx,%s(%%rip)\n",
                         registers.get(predecessorSkipProj(node, BinaryOperationNode.LEFT)),
                         registers.get(predecessorSkipProj(node, BinaryOperationNode.RIGHT)),
                         opcode,
