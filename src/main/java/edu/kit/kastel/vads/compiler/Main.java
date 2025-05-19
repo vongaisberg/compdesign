@@ -38,9 +38,16 @@ public class Main {
             return;
         }
         List<IrGraph> graphs = new ArrayList<>();
+        boolean foundMain=false;
         for (FunctionTree function : program.topLevelTrees()) {
+            System.out.println("Translating function " + function.name().name().asString());
+            if (function.name().name().asString().equals("main")) {foundMain=true;}
             SsaTranslation translation = new SsaTranslation(function, new LocalValueNumbering());
             graphs.add(translation.translate());
+        }
+        if (!foundMain) {
+            System.err.println("No main function found");
+            System.exit(7);
         }
 
         if ("vcg".equals(System.getenv("DUMP_GRAPHS")) || "vcg".equals(System.getProperty("dumpGraphs"))) {
