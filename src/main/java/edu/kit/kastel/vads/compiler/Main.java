@@ -1,6 +1,6 @@
 package edu.kit.kastel.vads.compiler;
 
-import edu.kit.kastel.vads.compiler.backend.aasm.CodeGenerator;
+import edu.kit.kastel.vads.compiler.backend.asm.CodeGenerator;
 import edu.kit.kastel.vads.compiler.ir.IrGraph;
 import edu.kit.kastel.vads.compiler.ir.SsaTranslation;
 import edu.kit.kastel.vads.compiler.ir.optimize.LocalValueNumbering;
@@ -52,6 +52,20 @@ public class Main {
         // TODO: generate assembly and invoke gcc instead of generating abstract assembly
         String s = new CodeGenerator().generateCode(graphs);
         Files.writeString(output, s);
+
+        ProcessBuilder processBuilder = new ProcessBuilder("gcc", output.toString(), "-o", output.toString().replace(".s", ""));
+        try {
+            Process process = processBuilder.start();
+            int exitCode = process.waitFor();
+            if (exitCode != 0) {
+                System.err.println("GCC compilation failed with exit code: " + exitCode);
+                System.exit(exitCode);
+            }
+        } catch (InterruptedException e) {
+            System.err.println("GCC compilation was interrupted: " + e.getMessage());
+            System.exit(8);
+        }
+
     }
 
     private static ProgramTree lexAndParse(Path input) throws IOException {
