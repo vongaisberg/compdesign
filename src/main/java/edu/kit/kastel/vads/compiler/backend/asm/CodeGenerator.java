@@ -93,9 +93,14 @@ public class CodeGenerator {
                         .append("  idivl ").append(registers.get(predecessorSkipProj(div, BinaryOperationNode.RIGHT))).append("(%rip)\n")
                         .append("  movl %eax,").append(registers.get(div)).append("(%rip)\n");
             }
-            case ModNode mod -> binary(builder, registers, mod, "imodl");
-            case ReturnNode r ->
-                    builder.repeat(" ", 2).append("movl ").append(registers.get(predecessorSkipProj(r, ReturnNode.RESULT))).append("(%rip)").append(",%eax\n").append("  ret");
+            case ModNode mod -> {
+                builder.repeat(" ", 2)
+                        .append("movl ").append(registers.get(predecessorSkipProj(mod, BinaryOperationNode.LEFT))).append("(%rip),%eax\n")
+                        .append("  cdq\n")
+                        .append("  idivl ").append(registers.get(predecessorSkipProj(mod, BinaryOperationNode.RIGHT))).append("(%rip)\n")
+                        .append("  movl %edx,").append(registers.get(mod)).append("(%rip)\n");
+            }
+            case ReturnNode r -> builder.repeat(" ", 2).append("movl ").append(registers.get(predecessorSkipProj(r, ReturnNode.RESULT))).append("(%rip)").append(",%eax\n").append("  ret");
             case ConstIntNode c ->
                     builder.repeat(" ", 2).append("movl $").append(c.value()).append(",").append(registers.get(c)).append("(%rip)");
             case Phi _ -> throw new UnsupportedOperationException("phi");
@@ -110,8 +115,8 @@ public class CodeGenerator {
     private static void binary(StringBuilder builder, Map<Node, Register> registers, BinaryOperationNode node, String opcode) {
         builder.repeat(" ", 2)
                 .append(String.format("movl %s(%%rip),%%ebx\n movl %s(%%rip),%%ecx\n %s %%ebx,%%ecx\nmovl %%ecx,%s(%%rip)\n",
-                        registers.get(predecessorSkipProj(node, BinaryOperationNode.LEFT)),
                         registers.get(predecessorSkipProj(node, BinaryOperationNode.RIGHT)),
+                        registers.get(predecessorSkipProj(node, BinaryOperationNode.LEFT)),
                         opcode,
                         registers.get(node)));
     }
