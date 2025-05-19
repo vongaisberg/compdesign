@@ -15,12 +15,6 @@ import java.util.Set;
 public class AsmRegisterAllocator implements RegisterAllocator {
 
     private static final Register[] REGISTERS = {
-            new AsmRegister("eax"),
-            new AsmRegister("ebx"),
-            new AsmRegister("ecx"),
-            new AsmRegister("edx"),
-            new AsmRegister("esi"),
-            new AsmRegister("edi"),
             new AsmRegister("r8d"),
             new AsmRegister("r9d"),
             new AsmRegister("r10d"),
