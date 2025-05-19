@@ -47,7 +47,7 @@ public class Main {
         }
         if (!foundMain) {
             System.err.println("No main function found");
-            System.exit(7);
+            System.exit(42);
         }
 
         if ("vcg".equals(System.getenv("DUMP_GRAPHS")) || "vcg".equals(System.getProperty("dumpGraphs"))) {
