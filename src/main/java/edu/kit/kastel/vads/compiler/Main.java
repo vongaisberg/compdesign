@@ -53,7 +53,7 @@ public class Main {
         String s = new CodeGenerator().generateCode(graphs);
         Files.writeString(output, s);
 
-        ProcessBuilder processBuilder = new ProcessBuilder("gcc", output.toString(), "-o", output.toString().replace(".s", ""));
+        ProcessBuilder processBuilder = new ProcessBuilder("gcc", output.toString()+".s", "-o", output.toString());
         try {
             Process process = processBuilder.start();
             int exitCode = process.waitFor();
