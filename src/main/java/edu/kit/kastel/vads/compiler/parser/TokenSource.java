@@ -43,6 +43,15 @@ public class TokenSource {
         return kw;
     }
 
+    public Keyword expectKeyword() {
+        Token token = peek();
+        if (!(token instanceof Keyword kw)) {
+            throw new ParseException("expected keyword but got " + token);
+        }
+        this.idx++;
+        return kw;
+    }
+
     public Separator expectSeparator(SeparatorType type) {
         Token token = peek();
         if (!(token instanceof Separator sep) || sep.type() != type) {

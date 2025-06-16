@@ -1,6 +1,7 @@
 package edu.kit.kastel.vads.compiler.parser.ast;
 
 import edu.kit.kastel.vads.compiler.Span;
+import edu.kit.kastel.vads.compiler.parser.type.Type;
 import edu.kit.kastel.vads.compiler.parser.visitor.Visitor;
 
 public record IdentExpressionTree(NameTree name) implements ExpressionTree {

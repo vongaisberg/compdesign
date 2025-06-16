@@ -108,6 +108,7 @@ public class CodeGenerator {
                 // do nothing, skip line break
                 return;
             }
+            default -> throw new UnsupportedOperationException("unknown node: " + node);
         }
         builder.append("\n");
     }

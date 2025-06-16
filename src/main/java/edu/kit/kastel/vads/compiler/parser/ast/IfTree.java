@@ -1,16 +1,12 @@
 package edu.kit.kastel.vads.compiler.parser.ast;
 
-import edu.kit.kastel.vads.compiler.lexer.Operator;
 import edu.kit.kastel.vads.compiler.Span;
-import edu.kit.kastel.vads.compiler.parser.type.Type;
 import edu.kit.kastel.vads.compiler.parser.visitor.Visitor;
 
-public record BinaryOperationTree(
-    ExpressionTree lhs, ExpressionTree rhs, Operator.OperatorType operatorType
-) implements ExpressionTree {
+public record IfTree(ExpressionTree condition, StatementTree thenStatement, StatementTree elseStatement) implements StatementTree {
     @Override
     public Span span() {
-        return lhs().span().merge(rhs().span());
+        return new Span.SimpleSpan(condition.span().start(), thenStatement.span().end());
     }
 
     @Override

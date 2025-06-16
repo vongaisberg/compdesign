@@ -41,7 +41,16 @@ public class Lexer {
             case '*' -> singleOrAssign(OperatorType.MUL, OperatorType.ASSIGN_MUL);
             case '/' -> singleOrAssign(OperatorType.DIV, OperatorType.ASSIGN_DIV);
             case '%' -> singleOrAssign(OperatorType.MOD, OperatorType.ASSIGN_MOD);
-            case '=' -> new Operator(OperatorType.ASSIGN, buildSpan(1));
+            case '=' -> equals();
+            case '!' -> notOperator();
+            case '~' -> new Operator(OperatorType.BIT_NOT, buildSpan(1));
+            case '<' -> lessThan();
+            case '>' -> greaterThan();
+            case '&' -> ampersand();
+            case '^' -> singleOrAssign(OperatorType.BIT_XOR, OperatorType.BIT_XOR_ASSIGN);
+            case '|' -> pipe();
+            case '?' -> new Operator(OperatorType.QUESTION, buildSpan(1));
+            case ':' -> new Operator(OperatorType.COLON, buildSpan(1));
             default -> {
                 if (isIdentifierChar(peek())) {
                     if (isNumeric(peek())) {
@@ -55,6 +64,70 @@ public class Lexer {
 
         return Optional.of(t);
     }
+
+private Token equals() {
+    if (hasMore(1) && peek(1) == '=') {
+        return new Operator(OperatorType.EQUAL, buildSpan(2));
+    }
+    return new Operator(OperatorType.ASSIGN, buildSpan(1));
+}
+
+private Token notOperator() {
+    if (hasMore(1) && peek(1) == '=') {
+        return new Operator(OperatorType.NOT_EQUAL, buildSpan(2));
+    }
+    return new Operator(OperatorType.NOT, buildSpan(1));
+}
+
+private Token lessThan() {
+    if (hasMore(1)) {
+        if (peek(1) == '=') {
+            return new Operator(OperatorType.LESS_EQUAL, buildSpan(2));
+        } else if (peek(1) == '<') {
+            if (hasMore(2) && peek(2) == '=') {
+                return new Operator(OperatorType.SHIFT_LEFT_ASSIGN, buildSpan(3));
+            }
+            return new Operator(OperatorType.SHIFT_LEFT, buildSpan(2));
+        }
+    }
+    return new Operator(OperatorType.LESS, buildSpan(1));
+}
+
+private Token greaterThan() {
+    if (hasMore(1)) {
+        if (peek(1) == '=') {
+            return new Operator(OperatorType.GREATER_EQUAL, buildSpan(2));
+        } else if (peek(1) == '>') {
+            if (hasMore(2) && peek(2) == '=') {
+                return new Operator(OperatorType.SHIFT_RIGHT_ASSIGN, buildSpan(3));
+            }
+            return new Operator(OperatorType.SHIFT_RIGHT, buildSpan(2));
+        }
+    }
+    return new Operator(OperatorType.GREATER, buildSpan(1));
+}
+
+private Token ampersand() {
+    if (hasMore(1)) {
+        if (peek(1) == '&') {
+            return new Operator(OperatorType.AND, buildSpan(2));
+        } else if (peek(1) == '=') {
+            return new Operator(OperatorType.BIT_AND_ASSIGN, buildSpan(2));
+        }
+    }
+    return new Operator(OperatorType.BIT_AND, buildSpan(1));
+}
+
+private Token pipe() {
+    if (hasMore(1)) {
+        if (peek(1) == '|') {
+            return new Operator(OperatorType.OR, buildSpan(2));
+        } else if (peek(1) == '=') {
+            return new Operator(OperatorType.BIT_OR_ASSIGN, buildSpan(2));
+        }
+    }
+    return new Operator(OperatorType.BIT_OR, buildSpan(1));
+}
 
     private @Nullable ErrorToken skipWhitespace() {
         enum CommentType {

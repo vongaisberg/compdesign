@@ -1,17 +1,6 @@
 package edu.kit.kastel.vads.compiler.ir;
 
-import edu.kit.kastel.vads.compiler.ir.node.AddNode;
-import edu.kit.kastel.vads.compiler.ir.node.Block;
-import edu.kit.kastel.vads.compiler.ir.node.ConstIntNode;
-import edu.kit.kastel.vads.compiler.ir.node.DivNode;
-import edu.kit.kastel.vads.compiler.ir.node.ModNode;
-import edu.kit.kastel.vads.compiler.ir.node.MulNode;
-import edu.kit.kastel.vads.compiler.ir.node.Node;
-import edu.kit.kastel.vads.compiler.ir.node.Phi;
-import edu.kit.kastel.vads.compiler.ir.node.ProjNode;
-import edu.kit.kastel.vads.compiler.ir.node.ReturnNode;
-import edu.kit.kastel.vads.compiler.ir.node.StartNode;
-import edu.kit.kastel.vads.compiler.ir.node.SubNode;
+import edu.kit.kastel.vads.compiler.ir.node.*;
 import edu.kit.kastel.vads.compiler.ir.optimize.Optimizer;
 import edu.kit.kastel.vads.compiler.parser.symbol.Name;
 
@@ -79,6 +68,26 @@ class GraphConstructor {
 
     public Node newResultProj(Node node) {
         return new ProjNode(currentBlock(), node, ProjNode.SimpleProjectionInfo.RESULT);
+    }
+
+    public void newJumpCond(Node condition, Block thenBlock, Block elseBlock) {
+        // Erstellen Sie einen bedingten Sprungknoten
+        // und fügen Sie die Kanten zum Then- und Else-Block hinzu
+        new JumpCondNode(currentBlock(), condition, thenBlock, elseBlock);
+    }
+
+    public void newJump(Block target) {
+        // Erstellen Sie einen unbedingten Sprungknoten
+        // und fügen Sie eine Kante zum Zielblock hinzu
+        new JumpNode(currentBlock(), target);
+    }
+
+    public void setCurrentBlock(Block block) {
+        this.currentBlock = block;
+    }
+
+    public Block createBlock() {
+        return new Block(this.graph);
     }
 
     public Block currentBlock() {
@@ -189,4 +198,69 @@ class GraphConstructor {
         return tryRemoveTrivialPhi(phi);
     }
 
+    // Add these methods to GraphConstructor class
+
+    // Bitwise operations
+    public Node newBitAnd(Node left, Node right) {
+        return this.optimizer.transform(new BitAndNode(currentBlock(), left, right));
+    }
+
+    public Node newBitOr(Node left, Node right) {
+        return this.optimizer.transform(new BitOrNode(currentBlock(), left, right));
+    }
+
+    public Node newBitXor(Node left, Node right) {
+        return this.optimizer.transform(new BitXorNode(currentBlock(), left, right));
+    }
+
+    public Node newBitNot(Node operand) {
+        return this.optimizer.transform(new BitNotNode(currentBlock(), operand));
+    }
+
+    // Logical operations
+    public Node newLogicalAnd(Node left, Node right) {
+        return this.optimizer.transform(new LogicalAndNode(currentBlock(), left, right));
+    }
+
+    public Node newLogicalOr(Node left, Node right) {
+        return this.optimizer.transform(new LogicalOrNode(currentBlock(), left, right));
+    }
+
+    public Node newLogicalNot(Node operand) {
+        return this.optimizer.transform(new LogicalNotNode(currentBlock(), operand));
+    }
+
+    // Comparison operations
+    public Node newEquals(Node left, Node right) {
+        return this.optimizer.transform(new EqualsNode(currentBlock(), left, right));
+    }
+
+    public Node newNotEquals(Node left, Node right) {
+        return this.optimizer.transform(new NotEqualsNode(currentBlock(), left, right));
+    }
+
+    public Node newLessThan(Node left, Node right) {
+        return this.optimizer.transform(new LessThanNode(currentBlock(), left, right));
+    }
+
+    public Node newLessEqual(Node left, Node right) {
+        return this.optimizer.transform(new LessEqualNode(currentBlock(), left, right));
+    }
+
+    public Node newGreaterThan(Node left, Node right) {
+        return this.optimizer.transform(new GreaterThanNode(currentBlock(), left, right));
+    }
+
+    public Node newGreaterEqual(Node left, Node right) {
+        return this.optimizer.transform(new GreaterEqualNode(currentBlock(), left, right));
+    }
+
+    // Shift operations
+    public Node newShiftLeft(Node left, Node right) {
+        return this.optimizer.transform(new ShiftLeftNode(currentBlock(), left, right));
+    }
+
+    public Node newShiftRight(Node left, Node right) {
+        return this.optimizer.transform(new ShiftRightNode(currentBlock(), left, right));
+    }
 }

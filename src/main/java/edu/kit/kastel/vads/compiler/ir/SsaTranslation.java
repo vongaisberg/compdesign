@@ -7,21 +7,7 @@ import edu.kit.kastel.vads.compiler.ir.node.Node;
 import edu.kit.kastel.vads.compiler.ir.optimize.Optimizer;
 import edu.kit.kastel.vads.compiler.ir.util.DebugInfo;
 import edu.kit.kastel.vads.compiler.ir.util.DebugInfoHelper;
-import edu.kit.kastel.vads.compiler.parser.ast.AssignmentTree;
-import edu.kit.kastel.vads.compiler.parser.ast.BinaryOperationTree;
-import edu.kit.kastel.vads.compiler.parser.ast.BlockTree;
-import edu.kit.kastel.vads.compiler.parser.ast.DeclarationTree;
-import edu.kit.kastel.vads.compiler.parser.ast.FunctionTree;
-import edu.kit.kastel.vads.compiler.parser.ast.IdentExpressionTree;
-import edu.kit.kastel.vads.compiler.parser.ast.LValueIdentTree;
-import edu.kit.kastel.vads.compiler.parser.ast.LiteralTree;
-import edu.kit.kastel.vads.compiler.parser.ast.NameTree;
-import edu.kit.kastel.vads.compiler.parser.ast.NegateTree;
-import edu.kit.kastel.vads.compiler.parser.ast.ProgramTree;
-import edu.kit.kastel.vads.compiler.parser.ast.ReturnTree;
-import edu.kit.kastel.vads.compiler.parser.ast.StatementTree;
-import edu.kit.kastel.vads.compiler.parser.ast.Tree;
-import edu.kit.kastel.vads.compiler.parser.ast.TypeTree;
+import edu.kit.kastel.vads.compiler.parser.ast.*;
 import edu.kit.kastel.vads.compiler.parser.symbol.Name;
 import edu.kit.kastel.vads.compiler.parser.visitor.Visitor;
 
@@ -89,6 +75,14 @@ public class SsaTranslation {
                 case ASSIGN_MUL -> data.constructor::newMul;
                 case ASSIGN_DIV -> (lhs, rhs) -> projResultDivMod(data, data.constructor.newDiv(lhs, rhs));
                 case ASSIGN_MOD -> (lhs, rhs) -> projResultDivMod(data, data.constructor.newMod(lhs, rhs));
+
+                // New L2 assignment operators
+                case BIT_AND_ASSIGN -> data.constructor::newBitAnd;
+                case BIT_OR_ASSIGN -> data.constructor::newBitOr;
+                case BIT_XOR_ASSIGN -> data.constructor::newBitXor;
+                case SHIFT_LEFT_ASSIGN -> data.constructor::newShiftLeft;
+                case SHIFT_RIGHT_ASSIGN -> data.constructor::newShiftRight;
+
                 case ASSIGN -> null;
                 default ->
                     throw new IllegalArgumentException("not an assignment operator " + assignmentTree.operator());
@@ -118,6 +112,27 @@ public class SsaTranslation {
                 case MUL -> data.constructor.newMul(lhs, rhs);
                 case DIV -> projResultDivMod(data, data.constructor.newDiv(lhs, rhs));
                 case MOD -> projResultDivMod(data, data.constructor.newMod(lhs, rhs));
+
+                case BIT_AND -> data.constructor.newBitAnd(lhs, rhs);
+                case BIT_OR -> data.constructor.newBitOr(lhs, rhs);
+                case BIT_XOR -> data.constructor.newBitXor(lhs, rhs);
+
+                case AND -> data.constructor.newLogicalAnd(lhs, rhs);
+                case OR -> data.constructor.newLogicalOr(lhs, rhs);
+
+                case EQUAL -> data.constructor.newEquals(lhs, rhs);
+                case NOT_EQUAL -> data.constructor.newNotEquals(lhs, rhs);
+                case LESS -> data.constructor.newLessThan(lhs, rhs);
+                case LESS_EQUAL -> data.constructor.newLessEqual(lhs, rhs);
+                case GREATER -> data.constructor.newGreaterThan(lhs, rhs);
+                case GREATER_EQUAL -> data.constructor.newGreaterEqual(lhs, rhs);
+
+                case SHIFT_LEFT -> data.constructor.newShiftLeft(lhs, rhs);
+                case SHIFT_RIGHT -> data.constructor.newShiftRight(lhs, rhs);
+
+
+
+
                 default ->
                     throw new IllegalArgumentException("not a binary expression operator " + binaryOperationTree.operatorType());
             };
@@ -169,7 +184,7 @@ public class SsaTranslation {
         }
 
         @Override
-        public Optional<Node> visit(LiteralTree literalTree, SsaTranslation data) {
+        public Optional<Node> visit(IntegerLiteralTree literalTree, SsaTranslation data) {
             pushSpan(literalTree);
             Node node = data.constructor.newConstInt((int) literalTree.parseValue().orElseThrow());
             popSpan();
@@ -187,13 +202,22 @@ public class SsaTranslation {
         }
 
         @Override
-        public Optional<Node> visit(NegateTree negateTree, SsaTranslation data) {
-            pushSpan(negateTree);
-            Node node = negateTree.expression().accept(this, data).orElseThrow();
-            Node res = data.constructor.newSub(data.constructor.newConstInt(0), node);
+        public Optional<Node> visit(UnaryOperationTree unaryOperationTree, SsaTranslation data) {
+            pushSpan(unaryOperationTree);
+            Node node = unaryOperationTree.expression().accept(this, data).orElseThrow();
+
+            Node res = switch (unaryOperationTree.operatorType()) {
+                case MINUS -> data.constructor.newSub(data.constructor.newConstInt(0), node);
+                case NOT -> data.constructor.newLogicalNot(node);
+                case BIT_NOT -> data.constructor.newBitNot(node);
+                default ->
+                        throw new IllegalArgumentException("not a unary expression operator " + unaryOperationTree.operatorType());
+            };
+
             popSpan();
             return Optional.of(res);
         }
+
 
         @Override
         public Optional<Node> visit(ProgramTree programTree, SsaTranslation data) {
@@ -224,6 +248,60 @@ public class SsaTranslation {
             Node projSideEffect = data.constructor.newSideEffectProj(divMod);
             data.constructor.writeCurrentSideEffect(projSideEffect);
             return data.constructor.newResultProj(divMod);
+        }
+
+		@Override
+		public Optional<Node> visit(IfTree ifTree, SsaTranslation data) {
+            pushSpan(ifTree);
+            
+            // 1. Evaluate condition
+            Node condition = ifTree.condition().accept(this, data).orElseThrow();
+            
+            // 2. Create blocks for then and else branches
+            Block thenBlock = data.constructor.createBlock();
+            Block elseBlock = data.constructor.createBlock();
+            Block mergeBlock = data.constructor.createBlock();
+            
+            // 3. Create conditional jump from current block
+            data.constructor.newJumpCond(condition, thenBlock, elseBlock);
+            
+            // 4. Generate then branch
+            data.constructor.setCurrentBlock(thenBlock);
+            ifTree.thenStatement().accept(this, data);
+            //TODO: if (!thenBlock.hasTerminator()) {
+                data.constructor.newJump(mergeBlock);
+            //}
+            
+            // 5. Generate else branch
+            data.constructor.setCurrentBlock(elseBlock);
+            if (ifTree.elseStatement() != null) {
+                ifTree.elseStatement().accept(this, data);
+            }
+           //TODO: if (!elseBlock.hasTerminator()) {
+                data.constructor.newJump(mergeBlock);
+           // }
+
+            data.constructor.sealBlock(thenBlock);
+            data.constructor.sealBlock(elseBlock);
+
+
+            // 6. Continue with merge block
+            data.constructor.setCurrentBlock(mergeBlock);
+
+            popSpan();
+            return NOT_AN_EXPRESSION;
+		}
+
+        @Override
+        public Optional<Node> visit(BoolLiteralTree boolLiteralTree, SsaTranslation data) {
+            //TODO
+            return Optional.empty();
+        }
+
+        @Override
+        public Optional<Node> visit(ConditionalExpressionTree conditionalExpressionTree, SsaTranslation data) {
+            //TODO
+            return Optional.empty();
         }
     }
 
